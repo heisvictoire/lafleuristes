@@ -182,21 +182,47 @@ const FIELD_LABELS = {
 const ACCENT_OPTS = ["gold","marigold","orange"];
 const labelFor = k => FIELD_LABELS[k] || (k.charAt(0).toUpperCase()+k.slice(1));
 
-/* ---------- upload média selon le mode ---------- */
-async function uploadMedia(file){
-  if (MODE === "firebase" && fb) {
-    const { ref, uploadBytes, getDownloadURL } = fb.sdk.storage;
-    const clean = file.name.replace(/[^\w.\-]+/g, "_");
-    const r = ref(fb.storage, "media/" + Date.now() + "_" + clean);
-    await uploadBytes(r, file);
-    return await getDownloadURL(r);
-  }
-  return await new Promise((res, rej) => {
+/* ---------- import d'un média ----------
+   Pas de « Storage » Firebase (payant). Le fichier est intégré
+   directement dans le contenu :
+   - images : redimensionnées (max 1400 px) + compressées ;
+   - vidéos : acceptées seulement si légères (< 900 Ko),
+     sinon on demande de remplacer le fichier dans assets/. */
+function readDataUrl(file){
+  return new Promise((res, rej) => {
     const rd = new FileReader();
     rd.onload = () => res(rd.result);
     rd.onerror = rej;
     rd.readAsDataURL(file);
   });
+}
+function compressImage(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 1400;
+      let { width:w, height:h } = img;
+      if (w > max || h > max){ const s = max / Math.max(w, h); w = Math.round(w*s); h = Math.round(h*s); }
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      let q = 0.82, out = c.toDataURL("image/jpeg", q);
+      while (out.length * 0.75 > 240000 && q > 0.5){ q -= 0.1; out = c.toDataURL("image/jpeg", q); }
+      res(out);
+    };
+    img.onerror = rej;
+    img.src = url;
+  });
+}
+async function uploadMedia(file){
+  if (/^image\//.test(file.type)) return await compressImage(file);
+  // vidéo (ou autre)
+  const data = await readDataUrl(file);
+  if (data.length * 0.75 > 920000)
+    throw new Error("vidéo trop lourde pour être intégrée. Remplacez plutôt le fichier dans le dossier assets/ (même nom) puis redéployez — voir README.");
+  return data;
 }
 
 /* ---------- champs ---------- */
@@ -419,17 +445,15 @@ function startOffline(){
 /* ---------- MODE FIREBASE ---------- */
 async function startFirebase(){
   $("loading").style.display = "flex";
-  const [{ initializeApp }, authMod, fsMod, stMod] = await Promise.all([
+  const [{ initializeApp }, authMod, fsMod] = await Promise.all([
     import(`${SDK}/firebase-app.js`),
     import(`${SDK}/firebase-auth.js`),
-    import(`${SDK}/firebase-firestore.js`),
-    import(`${SDK}/firebase-storage.js`)
+    import(`${SDK}/firebase-firestore.js`)
   ]);
   const app = initializeApp(FCFG);
   const auth = authMod.getAuth(app);
   const db = fsMod.getFirestore(app);
-  const storage = stMod.getStorage(app);
-  fb = { app, auth, db, storage, user:null, sdk:{ auth:authMod, fs:fsMod, storage:stMod } };
+  fb = { app, auth, db, user:null, sdk:{ auth:authMod, fs:fsMod } };
 
   const showAuth = t => { $("loading").style.display="none"; $("app").style.display="none";
     $("savebar").style.display="none"; $("auth").style.display="flex"; if(t)$("authErr").textContent=t; };
@@ -472,6 +496,12 @@ async function startFirebase(){
   });
 
   $("publishBtn").addEventListener("click", async () => {
+    const size = JSON.stringify(STATE).length;
+    if (size > 1000000) {
+      msg("Contenu trop lourd (" + (size/1048576).toFixed(1) + " Mo, maximum 1 Mo). " +
+          "Vous avez importé trop de photos lourdes : remettez-en certaines en « chemin » (assets/…) ou réduisez-les.", "err");
+      return;
+    }
     $("publishBtn").disabled = true; msg("Publication…");
     try {
       await fsMod.setDoc(fsMod.doc(db, "site", "content"), {
