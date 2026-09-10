@@ -1,0 +1,45 @@
+<section class="sec" id="ateliers">
+  <div class="wrap">
+    <div class="sec-head" data-accent="ateliers.eyebrowAccent">
+      <span class="eye"><i>/</i>&nbsp;<span data-t="ateliers.eyebrow"></span></span>
+      <h2 class="display" data-tbr="ateliers.title"></h2>
+      <p class="prose" data-t="ateliers.intro"></p>
+    </div>
+
+    <div class="edition" style="--slash:var(--gold)">
+      <span class="eye"><i>/</i>&nbsp;<span data-t="ateliers.edition.eyebrow"></span></span>
+      <h3 class="display edition-title" data-tbr="ateliers.edition.title"></h3>
+      <p class="prose edition-desc" data-t="ateliers.edition.desc"></p>
+
+      <ol class="temps" id="temps"></ol>
+
+      <div class="edition-body">
+        <div class="edition-info">
+          <dl class="facts" id="facts"></dl>
+          <ul class="incl" id="includes"></ul>
+          <p class="dress">Dress code suggéré <b data-t="ateliers.edition.dresscode"></b></p>
+          <div class="edition-actions">
+            <a class="btn" data-href="contact.formUrl" href="#" target="_blank" rel="noopener" style="--btn-accent:var(--gold)">
+              <span data-t="ateliers.edition.ctaLabel">Réserver ma place</span>
+              <span class="cap"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </a>
+            <button type="button" class="tlink tlink-btn" id="afficheBtn" aria-haspopup="dialog">
+              <span data-t="ateliers.edition.afficheLabel">Affiche promotionnelle</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M9 7h8v8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <a class="tlink" data-wa-q href="#" target="_blank" rel="noopener">
+              <span data-t="ateliers.edition.questionLabel">Poser une question</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+        <figure class="edition-media">
+          <video autoplay muted loop playsinline preload="metadata" data-poster="ateliers.edition.poster" aria-label="Aperçu de l'atelier floral La.Fleuriste">
+            <source data-src="ateliers.edition.video" src="" type="video/mp4">
+          </video>
+          <figcaption data-t="ateliers.edition.mediaCaption"></figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>

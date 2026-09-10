@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La.Fleuriste — Espace Gestionnaire</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Newsreader:wght@400;500&display=swap">
+<script>
+/* ============================================================
+   MOT DE PASSE DU MODE HORS-LIGNE (si la base Firebase n'est
+   pas encore configurée). Changez la valeur ci-dessous.
+   ============================================================ */
+window.ADMIN_PASSWORD = "fleuriste2026";
+</script>
+<script src="config.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  :root{
+    --bg:#141210; --surface:#1E1A16; --surface-2:#262019; --line:rgba(205,162,87,.24);
+    --text:#EFE7D9; --dim:#B3A793; --gold:#CDA257; --gold-soft:#E4C98C;
+    --danger:#C7584C; --ok:#7CA978;
+  }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:"Archivo",sans-serif; }
+  h1,h2,h3{ font-family:"Archivo",sans-serif; font-weight:700; margin:0; }
+  a{ color:var(--gold-soft); }
+
+  .screen{ min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center; padding:28px; }
+  .screen h1{ font-size:1.6rem; color:var(--gold-soft); }
+  .screen p{ color:var(--dim); max-width:46ch; font-family:"Newsreader",serif; }
+  .screen input{ width:300px; max-width:84vw; padding:12px 14px; background:var(--surface); border:1px solid var(--line); color:var(--text); font:inherit; }
+  .screen .err{ color:var(--danger); min-height:1.2em; font-size:.85rem; }
+  .screen .sep{ color:var(--dim); font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; margin:4px 0; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 20px; cursor:pointer; border:1px solid var(--gold); background:var(--gold); color:#161208; font-family:"Archivo",sans-serif; font-weight:700; font-size:.76rem; letter-spacing:.09em; text-transform:uppercase; }
+  .btn:hover{ background:var(--gold-soft); border-color:var(--gold-soft); }
+  .btn.ghost{ background:transparent; color:var(--text); border-color:var(--line); }
+  .btn.ghost:hover{ border-color:var(--gold); color:var(--gold-soft); }
+  .btn.danger{ background:transparent; color:var(--danger); border-color:var(--danger); }
+  .btn.sm{ padding:8px 13px; font-size:.68rem; }
+  .btn.wide{ width:300px; max-width:84vw; }
+  .btn[disabled]{ opacity:.5; cursor:not-allowed; }
+
+  .app{ display:none; }
+  header.top{ position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding:12px clamp(14px,4vw,36px); display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  header.top .brand{ font-weight:800; color:var(--gold-soft); }
+  header.top .brand span{ display:block; font-weight:400; font-size:.78rem; color:var(--dim); }
+  .tabs{ display:flex; flex-wrap:wrap; gap:6px; padding:12px clamp(14px,4vw,36px); border-bottom:1px solid var(--line); position:sticky; top:53px; background:var(--bg); z-index:4; }
+  .tab{ padding:8px 12px; border:1px solid var(--line); background:none; color:var(--dim); cursor:pointer; font-family:"Archivo",sans-serif; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; }
+  .tab.active{ background:var(--gold); border-color:var(--gold); color:#161208; font-weight:700; }
+  main{ padding:24px clamp(14px,4vw,36px) 150px; max-width:960px; }
+  .panel{ display:none; } .panel.active{ display:block; }
+  .panel > h2{ font-size:1.25rem; }
+  .panel > .hint{ color:var(--dim); font-family:"Newsreader",serif; margin:4px 0 20px; }
+
+  .field{ margin:0 0 15px; }
+  .field > label{ display:block; font-size:.7rem; letter-spacing:.07em; text-transform:uppercase; color:var(--gold-soft); margin-bottom:6px; }
+  .field input[type=text], .field textarea, .field select{ width:100%; padding:10px 12px; background:var(--surface); border:1px solid var(--line); color:var(--text); font:inherit; font-size:.92rem; }
+  .field textarea{ resize:vertical; min-height:62px; line-height:1.5; font-family:"Newsreader",serif; }
+  .field input:focus, .field textarea:focus, .field select:focus{ outline:none; border-color:var(--gold); }
+
+  .group{ border:1px solid var(--line); background:var(--surface); padding:15px; margin:0 0 13px; }
+  .group > .group-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:11px; flex-wrap:wrap; }
+  .group > .group-head strong{ color:var(--gold-soft); font-size:.74rem; letter-spacing:.07em; text-transform:uppercase; }
+  .group .group{ background:var(--surface-2); }
+
+  .media{ display:flex; gap:13px; align-items:flex-start; flex-wrap:wrap; }
+  .media .preview{ width:116px; height:116px; border:1px solid var(--line); background:var(--surface-2); display:flex; align-items:center; justify-content:center; overflow:hidden; flex:none; }
+  .media .preview img, .media .preview video{ width:100%; height:100%; object-fit:cover; }
+  .media .preview .ph{ color:var(--dim); font-size:.64rem; text-align:center; padding:6px; }
+  .media .mcol{ flex:1; min-width:210px; display:flex; flex-direction:column; gap:7px; }
+  .media .mcol small{ color:var(--dim); font-size:.72rem; word-break:break-all; }
+  .media .warn{ color:var(--danger); font-size:.72rem; }
+  .media .busy{ color:var(--gold-soft); font-size:.72rem; }
+
+  .savebar{ position:fixed; left:0; right:0; bottom:0; background:#0F0D0B; border-top:1px solid var(--line); padding:13px clamp(14px,4vw,36px); display:flex; gap:12px; align-items:center; flex-wrap:wrap; z-index:6; }
+  .savebar .msg{ font-size:.8rem; font-family:"Newsreader",serif; }
+  .savebar .msg.ok{ color:var(--ok); } .savebar .msg.err{ color:var(--danger); }
+  code{ background:var(--surface-2); padding:1px 5px; font-size:.85em; }
+  .paste-box{ width:100%; min-height:150px; background:var(--surface); border:1px solid var(--line); color:var(--text); font-family:ui-monospace,Menlo,monospace; font-size:.8rem; padding:12px; }
+  .g-btn{ display:inline-flex; align-items:center; gap:10px; background:#fff; color:#1f1f1f; border:1px solid #dadada; padding:11px 18px; font-weight:600; font-size:.82rem; cursor:pointer; width:300px; max-width:84vw; justify-content:center; }
+  .g-btn:hover{ background:#f4f4f4; }
+</style>
+</head>
+<body>
+
+<!-- écran de connexion (Firebase) -->
+<div class="screen" id="auth" style="display:none">
+  <h1>La·Fleuriste</h1>
+  <p>Espace Gestionnaire. Connectez-vous pour modifier le site.</p>
+  <input type="email" id="email" placeholder="Adresse e-mail" autocomplete="username">
+  <input type="password" id="pass" placeholder="Mot de passe" autocomplete="current-password">
+  <button class="btn wide" id="signInBtn">Se connecter</button>
+  <button class="btn ghost wide" id="registerBtn">Créer un compte</button>
+  <div class="sep">ou</div>
+  <button class="g-btn" id="googleBtn">
+    <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.2 5.3-4.7 7l7.6 5.9c4.4-4.1 6.8-10.1 6.8-17.4z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.3.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.4 0-11.7-3.7-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+    Continuer avec Google
+  </button>
+  <div class="err" id="authErr"></div>
+</div>
+
+<!-- écran mot de passe (mode hors-ligne) -->
+<div class="screen" id="lock" style="display:none">
+  <h1>La·Fleuriste</h1>
+  <p>Espace Gestionnaire — mode local. Entrez le mot de passe pour modifier le contenu.
+     Les modifications seront à télécharger puis à re-déployer.</p>
+  <input type="password" id="pw" placeholder="Mot de passe" autocomplete="off">
+  <button class="btn wide" id="unlock">Entrer</button>
+  <div class="err" id="pwErr"></div>
+</div>
+
+<div class="screen" id="loading" style="display:none"><p>Chargement…</p></div>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">La·Fleuriste <span id="whoami">Espace Gestionnaire</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn ghost sm" href="index.html" target="_blank" rel="noopener">Voir le site</a>
+      <button class="btn ghost sm" id="signOutBtn">Se déconnecter</button>
+    </div>
+  </header>
+  <div class="tabs" id="tabs"></div>
+  <main id="panels"></main>
+</div>
+
+<div class="savebar" id="savebar" style="display:none">
+  <button class="btn" id="publishBtn" style="display:none">Publier en ligne</button>
+  <button class="btn ghost" id="downloadBtn">Télécharger une sauvegarde (config.js)</button>
+  <span class="msg" id="saveMsg"></span>
+</div>
+
+<script type="module">
+/* ============================================================
+   ESPACE GESTIONNAIRE — logique
+   ============================================================ */
+const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
+const FCFG = window.FIREBASE_CONFIG || {};
+const ADMIN_EMAILS = (window.ADMIN_EMAILS || []).map(e => String(e).toLowerCase());
+const FIREBASE_OK = typeof FCFG.apiKey === "string" && FCFG.apiKey.indexOf("VOTRE_") !== 0 && !!FCFG.projectId;
+
+let STATE = null;
+let MODE = FIREBASE_OK ? "firebase" : "offline";
+let fb = null;            // { auth, db, storage, user, sdk }
+
+/* ---------- utilitaires ---------- */
+const $ = id => document.getElementById(id);
+const deepCopy = o => JSON.parse(JSON.stringify(o));
+function el(tag, cls, txt){ const e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e; }
+function auto(t){ t.style.height="auto"; t.style.height=(t.scrollHeight+4)+"px"; }
+function isMediaPath(s){
+  return typeof s==="string" && (/^https?:\/\//.test(s) && /(firebasestorage|\.(jpe?g|png|webp|gif|mp4|webm|mov))/i.test(s)
+    || /^data:(image|video)\//.test(s) || /\.(jpe?g|png|webp|gif|mp4|webm|mov)$/i.test(s.trim()) || /^assets\//i.test(s.trim()));
+}
+const MEDIA_KEYS = ["logo","photo","video","videoWebm","poster","img","image","affiche"];
+function isVideo(s){ return /^data:video\//.test(s) || /\.(mp4|webm|mov)(\?|$)/i.test(s) || /video/i.test(s.split("?")[0]&&""); }
+function bytesLabel(str){ const n=str.length*0.75; return n>1048576?(n/1048576).toFixed(1)+" Mo":Math.round(n/1024)+" Ko"; }
+
+const LABELS = {
+  brand:"Marque", contact:"Contact", social:"Réseaux sociaux", nav:"Menu", hero:"Accueil (hero)",
+  intro:"Bandeau d'intro", occasions:"Occasions", histoire:"Notre histoire", galerie:"Galerie",
+  citation:"Citation", ateliers:"Ateliers", faq:"FAQ", cta:"Réservation (CTA)", footer:"Pied de page"
+};
+const FIELD_LABELS = {
+  logo:"Logo", name:"Nom", whatsapp:"Numéro WhatsApp (sans + ni espaces)", phoneDisplay:"Numéro affiché",
+  email:"E-mail", website:"Site web (URL)", websiteLabel:"Site web (texte affiché)", address:"Adresse",
+  formUrl:"Lien du Google Form", whatsappFloatText:"Message WhatsApp par défaut",
+  instagram:"Instagram (URL)", facebook:"Facebook (URL)", tiktok:"TikTok (URL)",
+  eyebrow:"Sur-titre", eyebrowAccent:"Couleur du sur-titre", title:"Titre", intro:"Introduction",
+  aside:"Texte secondaire", asideEyebrow:"Sur-titre secondaire", ctaLabel:"Libellé du bouton",
+  ctaHref:"Lien du bouton", linkLabel:"Libellé du lien", linkHref:"Lien", video:"Vidéo", videoWebm:"Vidéo (webm)",
+  poster:"Image d'aperçu (poster)", tabLabel:"Libellé de l'onglet photo", tabHref:"Lien de l'onglet photo",
+  statement:"Phrase", value:"Chiffre", text:"Texte", short:"Résumé (carte)", detail:"Détail (fenêtre)",
+  accent:"Couleur", photo:"Photo", photoAlt:"Description de la photo (accessibilité)",
+  img:"Image", cap:"Légende", sub:"Sous-légende", alt:"Description (accessibilité)",
+  quote:"Citation", cite:"Signature", desc:"Description", dresscode:"Dress code (emojis)",
+  questionLabel:"Libellé « poser une question »", afficheLabel:"Libellé « affiche »",
+  affiche:"Affiche promotionnelle (image)", afficheAlt:"Description de l'affiche", mediaCaption:"Légende de la vidéo",
+  n:"Numéro", k:"Intitulé", v:"Valeur", q:"Question", r:"Réponse", label:"Libellé", href:"Lien",
+  copyright:"Mention légale", big:"Grand titre"
+};
+const ACCENT_OPTS = ["gold","marigold","orange"];
+const labelFor = k => FIELD_LABELS[k] || (k.charAt(0).toUpperCase()+k.slice(1));
+
+/* ---------- upload média selon le mode ---------- */
+async function uploadMedia(file){
+  if (MODE === "firebase" && fb) {
+    const { ref, uploadBytes, getDownloadURL } = fb.sdk.storage;
+    const clean = file.name.replace(/[^\w.\-]+/g, "_");
+    const r = ref(fb.storage, "media/" + Date.now() + "_" + clean);
+    await uploadBytes(r, file);
+    return await getDownloadURL(r);
+  }
+  return await new Promise((res, rej) => {
+    const rd = new FileReader();
+    rd.onload = () => res(rd.result);
+    rd.onerror = rej;
+    rd.readAsDataURL(file);
+  });
+}
+
+/* ---------- champs ---------- */
+function fieldString(obj, key, opts){
+  opts = opts || {};
+  const wrap = el("div","field");
+  wrap.appendChild(el("label", null, opts.label || labelFor(key)));
+  const val = obj[key];
+
+  if (key === "accent" || /Accent$/.test(key)) {
+    const s = el("select");
+    ACCENT_OPTS.forEach(o => { const op=el("option",null,o); op.value=o; if(val===o)op.selected=true; s.appendChild(op); });
+    s.addEventListener("change", () => obj[key]=s.value);
+    wrap.appendChild(s); return wrap;
+  }
+  if (MEDIA_KEYS.indexOf(key) > -1 || isMediaPath(val)) {
+    wrap.appendChild(mediaControl(obj, key)); return wrap;
+  }
+  const long = typeof val === "string" && (val.length > 60 || /\n/.test(val) ||
+    ["text","detail","intro","desc","aside","quote","statement","r"].indexOf(key) > -1);
+  const input = long ? el("textarea") : el("input");
+  if (!long) input.type = "text";
+  input.value = val == null ? "" : val;
+  input.addEventListener("input", () => { obj[key] = input.value; if (long) auto(input); });
+  wrap.appendChild(input);
+  if (long) setTimeout(() => auto(input), 0);
+  return wrap;
+}
+
+function mediaControl(obj, key){
+  let val = obj[key] || "";
+  const box = el("div","media");
+  const prev = el("div","preview");
+  const mcol = el("div","mcol");
+  const info = el("small");
+  const warn = el("div","warn");
+  const busy = el("div","busy");
+  box.appendChild(prev); box.appendChild(mcol);
+
+  function refresh(){
+    prev.innerHTML = "";
+    const isVid = /^data:video\//.test(val) || /\.(mp4|webm|mov)(\?|$)/i.test(val);
+    if (!val) prev.appendChild(el("div","ph","aucun fichier"));
+    else if (isVid){ const v=el("video"); v.src=val; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; prev.appendChild(v); }
+    else { const im=el("img"); im.src=val; prev.appendChild(im); }
+    info.textContent = /^data:/.test(val) ? "Fichier intégré · " + bytesLabel(val)
+                     : /^https?:/.test(val) ? "Fichier en ligne" : (val || "—");
+    warn.textContent = (/^data:video\//.test(val) && val.length*0.75 > 900000)
+      ? "Vidéo lourde : en mode local, remplacez plutôt le fichier dans assets/ (même nom)." : "";
+  }
+
+  const fileInput = el("input"); fileInput.type = "file"; fileInput.accept = "image/*,video/*";
+  fileInput.addEventListener("change", async () => {
+    const f = fileInput.files[0]; if (!f) return;
+    busy.textContent = "Envoi en cours…";
+    try { val = await uploadMedia(f); obj[key] = val; refresh(); }
+    catch (e) { busy.textContent = ""; warn.textContent = "Échec de l'envoi : " + (e.message || e); return; }
+    busy.textContent = "";
+  });
+
+  const pathBtn = el("button","btn ghost sm","Indiquer un chemin"); pathBtn.type = "button";
+  pathBtn.addEventListener("click", () => {
+    const c = prompt("Chemin ou URL du fichier (ex. assets/hero-band.mp4)", /^data:/.test(val) ? "" : val);
+    if (c != null) { val = c.trim(); obj[key] = val; refresh(); }
+  });
+  const clr = el("button","btn ghost sm","Vider"); clr.type = "button";
+  clr.addEventListener("click", () => { val = ""; obj[key] = ""; refresh(); });
+
+  const row = el("div"); row.style.display="flex"; row.style.gap="8px"; row.style.flexWrap="wrap";
+  row.appendChild(pathBtn); row.appendChild(clr);
+  mcol.appendChild(fileInput); mcol.appendChild(info); mcol.appendChild(busy); mcol.appendChild(warn); mcol.appendChild(row);
+  refresh();
+  return box;
+}
+
+function renderObject(container, obj){
+  Object.keys(obj).forEach(key => {
+    const val = obj[key];
+    if (val === null) return;
+    if (Array.isArray(val)) container.appendChild(renderArray(obj, key));
+    else if (typeof val === "object") {
+      const g = el("div","group");
+      const gh = el("div","group-head"); gh.appendChild(el("strong", null, labelFor(key)));
+      g.appendChild(gh); renderObject(g, val); container.appendChild(g);
+    }
+    else if (typeof val === "boolean") {
+      const f = el("div","field"); const lab = el("label");
+      const cb = el("input"); cb.type="checkbox"; cb.checked=val;
+      cb.addEventListener("change", () => obj[key]=cb.checked);
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" "+labelFor(key)));
+      f.appendChild(lab); container.appendChild(f);
+    }
+    else container.appendChild(fieldString(obj, key));
+  });
+}
+
+function renderArray(parent, key){
+  const arr = parent[key];
+  const g = el("div","group");
+  const gh = el("div","group-head"); gh.appendChild(el("strong", null, labelFor(key)+" ("+arr.length+")"));
+  g.appendChild(gh);
+  const listWrap = el("div"); g.appendChild(listWrap);
+
+  function redraw(){
+    listWrap.innerHTML = "";
+    gh.querySelector("strong").textContent = labelFor(key)+" ("+arr.length+")";
+    arr.forEach((item, i) => {
+      const row = el("div","group");
+      const rh = el("div","group-head"); rh.appendChild(el("strong", null, "#"+(i+1)));
+      const ctr = el("div"); ctr.style.display="flex"; ctr.style.gap="6px"; ctr.style.flexWrap="wrap";
+      const mk = (t,fn) => { const b=el("button","btn ghost sm",t); b.type="button"; b.addEventListener("click",fn); return b; };
+      ctr.appendChild(mk("↑",()=>{ if(i>0){ arr.splice(i-1,0,arr.splice(i,1)[0]); redraw(); }}));
+      ctr.appendChild(mk("↓",()=>{ if(i<arr.length-1){ arr.splice(i+1,0,arr.splice(i,1)[0]); redraw(); }}));
+      const rm = el("button","btn danger sm","Supprimer"); rm.type="button";
+      rm.addEventListener("click", () => { if(confirm("Supprimer cet élément ?")){ arr.splice(i,1); redraw(); }});
+      ctr.appendChild(rm); rh.appendChild(ctr); row.appendChild(rh);
+      if (item && typeof item === "object") renderObject(row, item);
+      else {
+        const f = el("div","field"); const inp = el("input"); inp.type="text"; inp.value=item;
+        inp.addEventListener("input", () => arr[i]=inp.value);
+        f.appendChild(inp); row.appendChild(f);
+      }
+      listWrap.appendChild(row);
+    });
+  }
+  const add = el("button","btn ghost sm","+ Ajouter"); add.type="button";
+  add.addEventListener("click", () => {
+    const tpl = arr[0];
+    arr.push(tpl && typeof tpl === "object" ? blank(tpl) : "");
+    redraw();
+  });
+  g.appendChild(add);
+  redraw();
+  return g;
+}
+function blank(o){
+  const n = Array.isArray(o) ? [] : {};
+  Object.keys(o).forEach(k => {
+    const v = o[k];
+    n[k] = (v && typeof v === "object") ? blank(v) : (typeof v === "boolean" ? false : "");
+  });
+  return n;
+}
+
+/* ---------- construction des onglets ---------- */
+function boot(){
+  const tabs = $("tabs"), panels = $("panels");
+  tabs.innerHTML = ""; panels.innerHTML = "";
+  Object.keys(STATE).forEach((key, i) => {
+    const t = el("button","tab"+(i===0?" active":""), LABELS[key] || key);
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+      t.classList.add("active"); $("panel-"+key).classList.add("active");
+      window.scrollTo(0,0);
+    });
+    tabs.appendChild(t);
+
+    const p = el("div","panel"+(i===0?" active":"")); p.id = "panel-"+key;
+    p.appendChild(el("h2", null, LABELS[key] || key));
+    p.appendChild(el("p","hint","Modifiez, puis « Publier en ligne » (ou « Télécharger une sauvegarde ») en bas de page."));
+    const val = STATE[key];
+    if (Array.isArray(val)) p.appendChild(renderArray(STATE, key));
+    else if (val && typeof val === "object") { const c = el("div"); renderObject(c, val); p.appendChild(c); }
+    else p.appendChild(fieldString(STATE, key));
+    panels.appendChild(p);
+  });
+  $("app").style.display = "block";
+  $("savebar").style.display = "flex";
+}
+
+/* ---------- sérialisation config.js ---------- */
+function jsVal(v, ind){
+  if (v === null) return "null";
+  if (typeof v === "boolean" || typeof v === "number") return String(v);
+  if (typeof v === "string") return JSON.stringify(v);
+  if (Array.isArray(v)) {
+    if (!v.length) return "[]";
+    if (v.every(x => typeof x === "string"))
+      return "[\n" + v.map(x => ind+"  "+JSON.stringify(x)).join(",\n") + "\n"+ind+"]";
+    return "[\n" + v.map(x => ind+"  "+jsVal(x, ind+"  ")).join(",\n") + "\n"+ind+"]";
+  }
+  const keys = Object.keys(v);
+  if (!keys.length) return "{}";
+  return "{\n" + keys.map(k => ind+"  "+k+": "+jsVal(v[k], ind+"  ")).join(",\n") + "\n"+ind+"}";
+}
+function buildConfig(){
+  return "/* LA.FLEURISTE — CONTENU DU SITE (config.js)\n" +
+         "   Sauvegarde générée par l'Espace Gestionnaire. */\n" +
+         "window.SITE_CONFIG = " + jsVal(STATE, "") + ";\n";
+}
+function download(){
+  const blob = new Blob([buildConfig()], { type:"text/javascript;charset=utf-8" });
+  const a = el("a"); a.href = URL.createObjectURL(blob); a.download = "config.js";
+  document.body.appendChild(a); a.click(); a.remove();
+  msg("Sauvegarde téléchargée.", "ok");
+}
+function msg(text, kind){
+  const m = $("saveMsg"); m.textContent = text; m.className = "msg " + (kind || "");
+  if (kind === "ok") setTimeout(() => { if (m.textContent === text) m.textContent = ""; }, 6000);
+}
+
+$("downloadBtn").addEventListener("click", download);
+
+/* ---------- MODE HORS-LIGNE ---------- */
+function startOffline(){
+  $("whoami").textContent = "Espace Gestionnaire — mode local";
+  $("lock").style.display = "flex";
+  const go = () => {
+    if ($("pw").value === window.ADMIN_PASSWORD) {
+      $("lock").style.display = "none";
+      STATE = deepCopy(window.SITE_CONFIG || {});
+      boot();
+    } else $("pwErr").textContent = "Mot de passe incorrect.";
+  };
+  $("unlock").addEventListener("click", go);
+  $("pw").addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+}
+
+/* ---------- MODE FIREBASE ---------- */
+async function startFirebase(){
+  $("loading").style.display = "flex";
+  const [{ initializeApp }, authMod, fsMod, stMod] = await Promise.all([
+    import(`${SDK}/firebase-app.js`),
+    import(`${SDK}/firebase-auth.js`),
+    import(`${SDK}/firebase-firestore.js`),
+    import(`${SDK}/firebase-storage.js`)
+  ]);
+  const app = initializeApp(FCFG);
+  const auth = authMod.getAuth(app);
+  const db = fsMod.getFirestore(app);
+  const storage = stMod.getStorage(app);
+  fb = { app, auth, db, storage, user:null, sdk:{ auth:authMod, fs:fsMod, storage:stMod } };
+
+  const showAuth = t => { $("loading").style.display="none"; $("app").style.display="none";
+    $("savebar").style.display="none"; $("auth").style.display="flex"; if(t)$("authErr").textContent=t; };
+
+  $("signInBtn").addEventListener("click", () =>
+    authMod.signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value)
+      .catch(e => $("authErr").textContent = friendly(e)));
+  $("registerBtn").addEventListener("click", () =>
+    authMod.createUserWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value)
+      .catch(e => $("authErr").textContent = friendly(e)));
+  $("googleBtn").addEventListener("click", () =>
+    authMod.signInWithPopup(auth, new authMod.GoogleAuthProvider())
+      .catch(e => $("authErr").textContent = friendly(e)));
+  $("signOutBtn").addEventListener("click", () => authMod.signOut(auth));
+
+  authMod.onAuthStateChanged(auth, async (user) => {
+    $("authErr").textContent = "";
+    if (!user) { showAuth(); return; }
+    if (ADMIN_EMAILS.length && ADMIN_EMAILS.indexOf((user.email||"").toLowerCase()) === -1) {
+      await authMod.signOut(auth);
+      showAuth("Ce compte (" + user.email + ") n'est pas autorisé à modifier le site.");
+      return;
+    }
+    fb.user = user;
+    $("auth").style.display = "none";
+    $("loading").style.display = "flex";
+    try {
+      const snap = await fsMod.getDoc(fsMod.doc(db, "site", "content"));
+      STATE = (snap.exists() && snap.data() && snap.data().data)
+        ? snap.data().data
+        : deepCopy(window.SITE_CONFIG || {});
+    } catch (e) {
+      STATE = deepCopy(window.SITE_CONFIG || {});
+      msg("Lecture en ligne impossible, contenu local chargé.", "err");
+    }
+    $("loading").style.display = "none";
+    $("whoami").textContent = "Connectée : " + user.email;
+    $("publishBtn").style.display = "inline-flex";
+    boot();
+  });
+
+  $("publishBtn").addEventListener("click", async () => {
+    $("publishBtn").disabled = true; msg("Publication…");
+    try {
+      await fsMod.setDoc(fsMod.doc(db, "site", "content"), {
+        data: STATE,
+        updatedAt: fsMod.serverTimestamp(),
+        updatedBy: fb.user.email
+      });
+      msg("Publié ✓ — le site est à jour (rafraîchissez-le pour voir).", "ok");
+    } catch (e) {
+      msg("Échec de la publication : " + friendly(e), "err");
+    }
+    $("publishBtn").disabled = false;
+  });
+}
+function friendly(e){
+  const c = (e && e.code) || "";
+  if (c.includes("wrong-password") || c.includes("invalid-credential")) return "E-mail ou mot de passe incorrect.";
+  if (c.includes("email-already-in-use")) return "Un compte existe déjà avec cet e-mail — cliquez « Se connecter ».";
+  if (c.includes("weak-password")) return "Mot de passe trop court (6 caractères minimum).";
+  if (c.includes("invalid-email")) return "Adresse e-mail invalide.";
+  if (c.includes("popup-closed")) return "Fenêtre Google fermée avant la fin.";
+  if (c.includes("permission-denied")) return "Droits insuffisants — vérifiez les règles Firestore et la liste des e-mails autorisés.";
+  return (e && e.message) || String(e);
+}
+
+/* ---------- démarrage ---------- */
+if (MODE === "firebase") startFirebase().catch(e => {
+  console.error(e);
+  document.body.innerHTML = '<div class="screen"><h1>Erreur de connexion à Firebase</h1><p>' +
+    (e.message || e) + '</p><p>Vérifiez firebase-config.js puis rechargez la page.</p></div>';
+});
+else startOffline();
+</script>
+</body>
+</html>
