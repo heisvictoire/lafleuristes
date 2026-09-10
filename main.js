@@ -28,6 +28,12 @@
   }
   function nl2br(s) { return esc(s).replace(/\n/g, "<br>"); }
   function accent(key) { return ACCENTS[key] || ACCENTS.gold; }
+  /* Convertit un lien de partage Google Drive en lien direct lisible par <video>. */
+  function mediaUrl(u) {
+    if (!u) return u;
+    var m = String(u).match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?[^]*id=)([-\w]{20,})/);
+    return m ? "https://drive.google.com/uc?export=download&id=" + m[1] : u;
+  }
   function waHref(text) {
     var n = (CFG.contact && CFG.contact.whatsapp) || "";
     return "https://wa.me/" + n + (text ? "?text=" + encodeURIComponent(text) : "");
@@ -60,8 +66,8 @@
     document.querySelectorAll("[data-src]").forEach(function (el) {
       var v = get(el.getAttribute("data-src"));
       if (v) {
-        el.setAttribute("src", v);
         var media = el.closest("video, audio, picture");
+        el.setAttribute("src", media ? mediaUrl(v) : v);
         if (media && media.load) media.load();
       }
     });
@@ -258,14 +264,19 @@
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
       });
     });
-    var aff = document.getElementById("afficheBtn");
-    if (aff) {
-      aff.addEventListener("click", function () {
-        var ed = (CFG.ateliers && CFG.ateliers.edition) || {};
-        openLightbox(ed.affiche, ed.afficheAlt,
-          "Affiche", (ed.title || "").replace(/\n/g, " "), aff);
-      });
+    function afficheData() {
+      var a = CFG.affiche || {};
+      return { img: a.image, alt: a.imageAlt, sub: (a.title || "").replace(/\n/g, " ") };
     }
+    ["afficheBtn", "afficheVisual"].forEach(function (id) {
+      var t = document.getElementById(id);
+      if (!t) return;
+      function open() { var d = afficheData(); openLightbox(d.img, d.alt, "Affiche", d.sub, t); }
+      t.addEventListener("click", open);
+      t.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      });
+    });
   }
 
   function wireDialogClose() {
@@ -343,5 +354,10 @@
     wireVideos();
     wireSocial();
     wireYear();
+
+    /* le site est prêt : on retire l'écran de chargement */
+    if (typeof window.LF_PRELOADER_DONE === "function") {
+      setTimeout(window.LF_PRELOADER_DONE, 250);
+    }
   };
 })();

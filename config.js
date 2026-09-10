@@ -12,6 +12,18 @@
    ============================================================ */
 window.SITE_CONFIG = {
 
+  /* Écran de chargement : courte vidéo affichée le temps que le
+     site charge (disparaît toute seule). Mettez enabled à false
+     pour l'enlever. La vidéo peut être un fichier assets/… ou un
+     lien (Google Drive accepté). */
+  preloader: {
+    enabled: true,
+    video: "assets/quote.mp4",
+    poster: "assets/quote.jpg",
+    minSeconds: 1.5,   // durée minimale d'affichage
+    maxSeconds: 6      // durée maximale (disparaît de force après)
+  },
+
   brand: {
     name: "La.Fleuriste",
     logo: "assets/logo-lafleuriste.png"
@@ -151,13 +163,22 @@ window.SITE_CONFIG = {
       ctaLabel: "Réserver ma place",
       questionLabel: "Poser une question",
       afficheLabel: "Affiche promotionnelle",
-      affiche: "assets/poster.jpg",
-      afficheAlt: "Affiche de l'Atelier Floral Couleurs & Émotions — Samedi 10 octobre 2026, Almadies, Dakar",
       video: "assets/atelier.mp4",
       videoWebm: "",
       poster: "assets/atelier-poster.jpg",
       mediaCaption: "Aperçu — Atelier Couleurs & Émotions"
     }
+  },
+
+  /* Section « affiche » (visuel promotionnel en grand). */
+  affiche: {
+    eyebrow: "L'affiche",
+    eyebrowAccent: "gold",
+    title: "L'édition en cours,\nen grand",
+    note: "Enregistrez l'affiche de l'Atelier Couleurs & Émotions et partagez-la autour de vous.",
+    image: "assets/poster.jpg",
+    imageAlt: "Affiche de l'Atelier Floral Couleurs & Émotions — Samedi 10 octobre 2026, Almadies, Dakar",
+    ctaLabel: "Réserver ma place"
   },
 
   faq: {

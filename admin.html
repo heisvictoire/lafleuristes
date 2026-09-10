@@ -146,6 +146,15 @@ let fb = null;            // { auth, db, storage, user, sdk }
 /* ---------- utilitaires ---------- */
 const $ = id => document.getElementById(id);
 const deepCopy = o => JSON.parse(JSON.stringify(o));
+function mergeConfig(base, over){
+  if (Array.isArray(over)) return over.slice();
+  if (over && typeof over === "object"){
+    const out = (base && typeof base === "object" && !Array.isArray(base)) ? Object.assign({}, base) : {};
+    Object.keys(over).forEach(k => { out[k] = mergeConfig(out[k], over[k]); });
+    return out;
+  }
+  return over === undefined ? base : over;
+}
 function el(tag, cls, txt){ const e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e; }
 function auto(t){ t.style.height="auto"; t.style.height=(t.scrollHeight+4)+"px"; }
 function isMediaPath(s){
@@ -157,9 +166,10 @@ function isVideo(s){ return /^data:video\//.test(s) || /\.(mp4|webm|mov)(\?|$)/i
 function bytesLabel(str){ const n=str.length*0.75; return n>1048576?(n/1048576).toFixed(1)+" Mo":Math.round(n/1024)+" Ko"; }
 
 const LABELS = {
-  brand:"Marque", contact:"Contact", social:"Réseaux sociaux", nav:"Menu", hero:"Accueil (hero)",
-  intro:"Bandeau d'intro", occasions:"Occasions", histoire:"Notre histoire", galerie:"Galerie",
-  citation:"Citation", ateliers:"Ateliers", faq:"FAQ", cta:"Réservation (CTA)", footer:"Pied de page"
+  preloader:"Écran de chargement", brand:"Marque", contact:"Contact", social:"Réseaux sociaux",
+  nav:"Menu", hero:"Accueil (hero)", intro:"Bandeau d'intro", occasions:"Occasions",
+  histoire:"Notre histoire", galerie:"Galerie", citation:"Citation", ateliers:"Ateliers",
+  affiche:"Affiche (section)", faq:"FAQ", cta:"Réservation (CTA)", footer:"Pied de page"
 };
 const FIELD_LABELS = {
   logo:"Logo", name:"Nom", whatsapp:"Numéro WhatsApp (sans + ni espaces)", phoneDisplay:"Numéro affiché",
@@ -175,12 +185,18 @@ const FIELD_LABELS = {
   img:"Image", cap:"Légende", sub:"Sous-légende", alt:"Description (accessibilité)",
   quote:"Citation", cite:"Signature", desc:"Description", dresscode:"Dress code (emojis)",
   questionLabel:"Libellé « poser une question »", afficheLabel:"Libellé « affiche »",
-  affiche:"Affiche promotionnelle (image)", afficheAlt:"Description de l'affiche", mediaCaption:"Légende de la vidéo",
+  afficheLabel:"Libellé du bouton « affiche »", afficheAlt:"Description de l'affiche",
+  mediaCaption:"Légende de la vidéo", note:"Texte", enabled:"Afficher l'écran de chargement",
+  minSeconds:"Durée minimale (secondes)", maxSeconds:"Durée maximale (secondes)",
   n:"Numéro", k:"Intitulé", v:"Valeur", q:"Question", r:"Réponse", label:"Libellé", href:"Lien",
   copyright:"Mention légale", big:"Grand titre"
 };
 const ACCENT_OPTS = ["gold","marigold","orange"];
 const labelFor = k => FIELD_LABELS[k] || (k.charAt(0).toUpperCase()+k.slice(1));
+function driveLink(u){
+  const m = String(u).match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?[^]*id=)([-\w]{20,})/);
+  return m ? "https://drive.google.com/uc?export=download&id=" + m[1] : u;
+}
 
 /* ---------- import d'un média ----------
    Pas de « Storage » Firebase (payant). Le fichier est intégré
@@ -241,6 +257,11 @@ function fieldString(obj, key, opts){
   if (MEDIA_KEYS.indexOf(key) > -1 || isMediaPath(val)) {
     wrap.appendChild(mediaControl(obj, key)); return wrap;
   }
+  if (typeof val === "number") {
+    const n = el("input"); n.type = "number"; n.step = "0.5"; n.min = "0"; n.value = val;
+    n.addEventListener("input", () => { obj[key] = n.value === "" ? 0 : parseFloat(n.value); });
+    wrap.appendChild(n); return wrap;
+  }
   const long = typeof val === "string" && (val.length > 60 || /\n/.test(val) ||
     ["text","detail","intro","desc","aside","quote","statement","r"].indexOf(key) > -1);
   const input = long ? el("textarea") : el("input");
@@ -283,10 +304,12 @@ function mediaControl(obj, key){
     busy.textContent = "";
   });
 
-  const pathBtn = el("button","btn ghost sm","Indiquer un chemin"); pathBtn.type = "button";
+  const pathBtn = el("button","btn ghost sm","Indiquer un lien / chemin"); pathBtn.type = "button";
   pathBtn.addEventListener("click", () => {
-    const c = prompt("Chemin ou URL du fichier (ex. assets/hero-band.mp4)", /^data:/.test(val) ? "" : val);
-    if (c != null) { val = c.trim(); obj[key] = val; refresh(); }
+    const c = prompt("Chemin d'un fichier (ex. assets/hero-band.mp4) OU lien direct.\n" +
+      "Lien de partage Google Drive accepté (converti automatiquement).",
+      /^data:/.test(val) ? "" : val);
+    if (c != null) { val = driveLink(c.trim()); obj[key] = val; refresh(); }
   });
   const clr = el("button","btn ghost sm","Vider"); clr.type = "button";
   clr.addEventListener("click", () => { val = ""; obj[key] = ""; refresh(); });
@@ -381,9 +404,16 @@ function boot(){
     });
     tabs.appendChild(t);
 
+    const HINTS = {
+      preloader: "Courte vidéo affichée pendant le chargement du site. Décochez « Afficher » pour l'enlever. " +
+        "« Durée minimale » = temps d'affichage garanti même si le site est déjà prêt. « Durée maximale » = " +
+        "au-delà, l'écran disparaît même si tout n'est pas chargé.",
+      affiche: "La grande section « affiche » sous les ateliers. Changez l'image, le titre et le texte."
+    };
     const p = el("div","panel"+(i===0?" active":"")); p.id = "panel-"+key;
     p.appendChild(el("h2", null, LABELS[key] || key));
-    p.appendChild(el("p","hint","Modifiez, puis « Publier en ligne » (ou « Télécharger une sauvegarde ») en bas de page."));
+    p.appendChild(el("p","hint", HINTS[key] ||
+      "Modifiez, puis « Publier en ligne » (ou « Télécharger une sauvegarde ») en bas de page."));
     const val = STATE[key];
     if (Array.isArray(val)) p.appendChild(renderArray(STATE, key));
     else if (val && typeof val === "object") { const c = el("div"); renderObject(c, val); p.appendChild(c); }
@@ -482,9 +512,10 @@ async function startFirebase(){
     $("loading").style.display = "flex";
     try {
       const snap = await fsMod.getDoc(fsMod.doc(db, "site", "content"));
-      STATE = (snap.exists() && snap.data() && snap.data().data)
-        ? snap.data().data
-        : deepCopy(window.SITE_CONFIG || {});
+      // on part de config.js (structure de référence) et on applique par-dessus
+      // ce qui a été modifié en ligne — les nouvelles sections restent visibles.
+      const online = (snap.exists() && snap.data() && snap.data().data) ? snap.data().data : {};
+      STATE = mergeConfig(deepCopy(window.SITE_CONFIG || {}), online);
     } catch (e) {
       STATE = deepCopy(window.SITE_CONFIG || {});
       msg("Lecture en ligne impossible, contenu local chargé.", "err");

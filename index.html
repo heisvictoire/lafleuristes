@@ -16,8 +16,56 @@
 <script src="config.js"></script>
 <script src="firebase-config.js"></script>
 <script type="module" src="content-loader.js"></script>
+<style>
+  #preloader{ position:fixed; inset:0; z-index:9999; background:#FBFAF7; display:flex;
+    align-items:center; justify-content:center; transition:opacity .6s ease; }
+  #preloader.hide{ opacity:0; pointer-events:none; }
+  #preloader video{ width:100%; height:100%; object-fit:cover; }
+  #preloader .pl-mark{ position:absolute; left:50%; bottom:38px; transform:translateX(-50%);
+    font-family:"Archivo",sans-serif; font-weight:600; font-size:.66rem; letter-spacing:.24em;
+    text-transform:uppercase; color:#FBFAF7; text-shadow:0 1px 8px rgba(0,0,0,.4); }
+  @media (prefers-reduced-motion:reduce){ #preloader{ display:none; } }
+</style>
 </head>
 <body>
+
+<div id="preloader" aria-hidden="true">
+  <video id="preloaderVideo" muted playsinline autoplay preload="auto"></video>
+  <span class="pl-mark">La·Fleuriste</span>
+</div>
+<script>
+  /* Écran de chargement (vidéo courte). Se retire seul :
+     quand le site est prêt, au chargement complet, ou après 4 s. */
+  (function () {
+    var pl = document.getElementById("preloader");
+    var cfg = (window.SITE_CONFIG && window.SITE_CONFIG.preloader) || {};
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function driveDirect(u){
+      if (!u) return u;
+      var m = String(u).match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?[^]*id=)([-\w]{20,})/);
+      return m ? "https://drive.google.com/uc?export=download&id=" + m[1] : u;
+    }
+    function clamp(n, lo, hi, dflt){ n = parseFloat(n); return isNaN(n) ? dflt : Math.min(hi, Math.max(lo, n)); }
+    var MIN_MS = clamp(cfg.minSeconds, 0, 10, 1.5) * 1000;
+    var MAX_MS = clamp(cfg.maxSeconds, 1, 20, 6) * 1000;
+    var START = Date.now(), killed = false;
+    function done(){
+      if (killed || !pl) return; killed = true;
+      var wait = Math.max(0, MIN_MS - (Date.now() - START));
+      setTimeout(function(){ pl.classList.add("hide"); setTimeout(function(){ pl.remove(); }, 700); }, wait);
+    }
+    if (!pl) return;
+    if (reduce || cfg.enabled === false) { pl.remove(); return; }
+    var v = document.getElementById("preloaderVideo");
+    if (cfg.poster) v.poster = cfg.poster;
+    if (cfg.video) { v.src = driveDirect(cfg.video); v.play && v.play().catch(function(){}); }
+    else { done(); return; }
+    window.LF_PRELOADER_DONE = done;
+    window.addEventListener("load", function(){ setTimeout(done, 300); });
+    setTimeout(done, MAX_MS);
+    pl.addEventListener("click", done);
+  })();
+</script>
 
 <a class="skip" href="#top">Aller au contenu</a>
 
@@ -31,6 +79,7 @@
   <div data-include="sections/galerie.html"></div>
   <div data-include="sections/citation.html"></div>
   <div data-include="sections/ateliers.html"></div>
+  <div data-include="sections/affiche.html"></div>
   <div data-include="sections/faq.html"></div>
   <div data-include="sections/cta.html"></div>
 </main>

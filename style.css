@@ -342,7 +342,7 @@ dialog.lightbox::backdrop{ background:rgba(20,16,14,.9); }
 .temps h4{ font-family:"Archivo",sans-serif; font-weight:700; text-transform:uppercase; font-size:.98rem; margin:14px 0 8px; }
 .temps p{ margin:0; color:var(--ink-soft); font-size:.96rem; }
 
-.edition-body{ display:grid; grid-template-columns:1.1fr .9fr; gap:56px; margin-top:52px; align-items:start; }
+.edition-body{ display:grid; grid-template-columns:.82fr 1.18fr; gap:56px; margin-top:52px; align-items:start; }
 .facts{ margin:0; border-top:1px solid var(--rule); }
 .fact{ display:flex; justify-content:space-between; gap:20px; padding:15px 0; border-bottom:1px solid var(--rule); }
 .fact dt{ font-family:"Archivo",sans-serif; font-weight:600; font-size:.68rem; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft); }
@@ -356,6 +356,19 @@ dialog.lightbox::backdrop{ background:rgba(20,16,14,.9); }
 .edition-media{ margin:0; }
 .edition-media video{ width:100%; aspect-ratio:3/4; object-fit:cover; background:var(--ink); }
 .edition-media figcaption{ margin-top:12px; text-align:center; font-family:"Archivo",sans-serif; font-weight:600; font-size:.66rem; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft); }
+
+/* section « affiche » — visuel promotionnel en grand */
+.affiche{ background:#F3EEE3; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);
+  padding:clamp(56px,8vw,110px) 0; }
+.affiche-in{ display:grid; grid-template-columns:0.85fr 1.15fr; gap:clamp(34px,6vw,72px); align-items:center; }
+.affiche-text{ display:flex; flex-direction:column; gap:22px; }
+.affiche-text h2{ font-size:clamp(2rem,5vw,3.4rem); }
+.affiche-visual{ margin:0; position:relative; cursor:pointer; justify-self:center;
+  width:100%; max-width:600px; background:var(--card); padding:14px;
+  box-shadow:0 30px 70px rgba(27,23,18,.16); }
+.affiche-visual img{ width:100%; height:auto; display:block; }
+.affiche-visual .sq{ position:absolute; right:14px; bottom:14px; }
+.affiche-visual:hover .sq svg{ transform:translate(3px,-3px); }
 
 /* faq */
 .faq-grid{ display:grid; grid-template-columns:.8fr 1.2fr; gap:56px; align-items:start; }
@@ -429,8 +442,11 @@ footer .wrap{ padding-top:clamp(70px,10vw,120px); padding-bottom:42px; }
   .trio{ grid-template-columns:1fr 1fr; }
   .trio > div:nth-child(2){ border-left:none; }
   .trio > div:first-child{ grid-column:1 / -1; border-bottom:1px solid var(--rule); }
-  .edition-body{ grid-template-columns:1fr; gap:40px; }
-  .edition-media{ max-width:440px; }
+  .edition-body{ grid-template-columns:1fr; gap:36px; }
+  .edition-media{ max-width:460px; }
+  .edition-media video{ aspect-ratio:16/10; }
+  .affiche-in{ grid-template-columns:1fr; gap:34px; }
+  .affiche-visual{ max-width:520px; }
 }
 
 /* tablette */
